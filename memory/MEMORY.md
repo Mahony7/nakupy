@@ -1,0 +1,2 @@
+- [OpenAPI integer compatibility](api-codegen-zod.md) — prefer number schemas unless integer validation is essential because generated zod.int() is unsupported.
+- [Shared household settings](shared-household-settings.md) — household names and copy are server data so every device stays in sync.
