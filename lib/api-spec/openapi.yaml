@@ -1,0 +1,312 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: expenses
+    description: Shared household expense operations
+  - name: settings
+    description: Shared household settings
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List shared expenses
+      parameters:
+        - name: month
+          in: query
+          required: false
+          description: Calendar month in YYYY-MM format
+          schema:
+            type: string
+            pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      responses:
+        "200":
+          description: Shared expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Add a shared expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          description: Invalid expense
+  /expenses/summary:
+    get:
+      operationId: getExpenseSummary
+      tags: [expenses]
+      summary: Calculate monthly settlement
+      parameters:
+        - name: month
+          in: query
+          required: true
+          description: Calendar month in YYYY-MM format
+          schema:
+            type: string
+            pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      responses:
+        "200":
+          description: Monthly expense summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseSummary"
+  /expenses/stats:
+    get:
+      operationId: getExpenseStats
+      tags: [expenses]
+      summary: Get expense statistics for the last twelve months
+      responses:
+        "200":
+          description: Monthly expense statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyExpenseStats"
+  /expenses/{id}:
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          description: Expense not found
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Expense deleted
+        "404":
+          description: Expense not found
+  /settings:
+    get:
+      operationId: getHouseholdSettings
+      tags: [settings]
+      summary: Get shared household settings
+      responses:
+        "200":
+          description: Shared household settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdSettings"
+    put:
+      operationId: updateHouseholdSettings
+      tags: [settings]
+      summary: Update shared household settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseholdSettingsInput"
+      responses:
+        "200":
+          description: Updated shared household settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdSettings"
+        "400":
+          description: Invalid household settings
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Expense:
+      type: object
+      properties:
+        id:
+          type: number
+        amount:
+          type: number
+          minimum: 0.01
+        paidBy:
+          type: string
+          enum: [me, wife]
+        date:
+          type: string
+          format: date
+        note:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, amount, paidBy, date, note, createdAt]
+    ExpenseInput:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        paidBy:
+          type: string
+          enum: [me, wife]
+        date:
+          type: string
+          format: date
+        note:
+          type: [string, "null"]
+      required: [amount, paidBy, date]
+    ExpenseUpdate:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        paidBy:
+          type: string
+          enum: [me, wife]
+        date:
+          type: string
+          format: date
+        note:
+          type: [string, "null"]
+    ExpenseSummary:
+      type: object
+      properties:
+        month:
+          type: string
+        total:
+          type: number
+        paidByMe:
+          type: number
+        paidByWife:
+          type: number
+        halfTotal:
+          type: number
+        balance:
+          type: number
+        debtor:
+          type: [string, "null"]
+        expenseCount:
+          type: number
+      required:
+        [month, total, paidByMe, paidByWife, halfTotal, balance, debtor, expenseCount]
+    MonthlyExpenseStats:
+      type: object
+      properties:
+        month:
+          type: string
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        total:
+          type: number
+        paidByMe:
+          type: number
+        paidByWife:
+          type: number
+        expenseCount:
+          type: number
+      required: [month, total, paidByMe, paidByWife, expenseCount]
+    HouseholdSettings:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        myName:
+          type: string
+          minLength: 1
+        partnerName:
+          type: string
+          minLength: 1
+        togetherSince:
+          type: string
+          minLength: 1
+        headline:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+      required: [configured, myName, partnerName, togetherSince, headline, description]
+    HouseholdSettingsInput:
+      type: object
+      properties:
+        myName:
+          type: string
+          minLength: 1
+        partnerName:
+          type: string
+          minLength: 1
+        togetherSince:
+          type: string
+          minLength: 1
+        headline:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+      required: [myName, partnerName, togetherSince, headline, description]
+
